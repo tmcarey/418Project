@@ -5,7 +5,7 @@
 #include "Window.h"
 #include "Math.h"
 
-#define mouseSensitivity 1.0
+#define mouseSensitivity 0.05
 
 class Player {
 public:

@@ -11,6 +11,7 @@
 #include "Transform.h"
 #include "Chunk.h"
 #include "Player.h"
+#include "Octree.h"
 //#include "stb_image.h"
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -231,6 +232,8 @@ int main()
 	glm::vec4 ray01;
 	glm::vec4 ray10;
 	glm::vec4 ray11;
+
+	Octree* octreeTrue = GenerateRandom(1);
 
     while(!window->closed()){
 		

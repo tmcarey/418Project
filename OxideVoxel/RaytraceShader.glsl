@@ -8,87 +8,121 @@ uniform vec3 ray01;
 uniform vec3 ray10;
 uniform vec3 ray11;
 
-uniform int octree;
+uniform int octree2;
 
 
 
-vec4 trace(vec3 origin, vec3 dir){
-    /*if(dir.x == 0 || dir.y == 0 || dir.z == 0){
-        return vec4(0.0, 0.0, 0.0, 1.0);
+vec4 trace(vec3 origin, vec3 dir, vec4 success, vec4 fail){
+    int octree = -2;
+    int correction = 0;
+    if(dir.x < 0){
+        correction = correction | 1;
+        dir.x = -dir.x;
+        origin.x = -origin.x;
     }
 
-    float xv = 1 / (dir.x);
-    float yv = 1/ (dir.y);
-    float zv = 1 / (dir.z);
+    if(dir.y < 0){
+        correction = correction | (1 << 1);
+        dir.y = -dir.y;
+        origin.y = -origin.y;
+    }
 
-    float xc = origin.x * xv;
-    float yc = origin.y * yv;
-    float zc = origin.z * zv;
+    if(dir.z < 0){
+        correction = correction | (1 << 2);
+        dir.z = -dir.z;
+        origin.z = -origin.z;
+    }
 
-        
-    float t_y_0 = -yc;
-    float t_min = max(x-;
-    float t_max = max(max(xv - xc, yv - yc), zv - zc);
+    float xcof = - origin.x / dir.x;
+    float xmin = (-1 / dir.x) + xcof;
+    float xmax = (1 / dir.x) + xcof;
+    //These autofail the trace if we miss the cube
+    if(xmax < 0){
+        return fail;
+    }
+
+    float ycof = - origin.y / dir.y;
+    float ymin = (-1 / dir.y) + ycof;
+    float ymax = (1 / dir.y) + ycof;
+    if(ymax < 0){
+        return fail;
+    }
+
+    float zcof = - origin.z / dir.z;
+    float zmin = (-1 / dir.z) + zcof;
+    float zmax = (1 / dir.z) + zcof;
+    if(zmax < 0){
+        return fail;
+    }
+
+    //find extreme plane hits
+    float maxmin = xmin;
+    if(ymin >= maxmin){
+        maxmin = ymin;
+    }
+    if(zmin >= maxmin){
+        maxmin = zmin;
+    }
+
+    float minmax = xmax;
+    if(ymax <= minmax){
+      minmax = ymax;
+    }
+    if(zmax <= minmax){
+      minmax = zmax;
+    }
     
-   // t_min = fmaxf(t_min, 0.0f);
-   // t_max = fminf(t_max, 1.0f);
-    if(t_min <= t_max){
-      return vec4(0.0,1.0,0.0,1.0);
+    //Check for cube hit
+    if(minmax >= maxmin){
+        int index = 0;
+        //determine octant
+        if(maxmin >= xcof){
+          index = index | 1;
+        }
+        if(maxmin >= ycof){
+          index = index | (1 << 1);
+        }
+        if(maxmin >= zcof){
+          index = index | (1 << 2);
+        }
+        vec4 green = vec4(0.0,1.0,0.0,1.0);
+        
+        while((octree >> (index ^ correction)) % 2 == 0){
+            green = vec4(0.0,1.0,0.0,1.0);
+            float currmin = minmax;
+            int currindex = 0;
+
+            if(xcof > 0 && xcof >= maxmin && xcof <= minmax && xcof <= currmin){
+                currindex = index ^ (1);
+                currmin = xcof;
+            }
+
+            if(ycof > 0 && ycof >= maxmin && ycof <= minmax && ycof <= currmin){
+                currindex = index ^ (1 << 1);
+                currmin = ycof;
+            }
+
+            if(zcof > 0 && zcof >= maxmin && zcof <= minmax && zcof <= currmin){
+                currindex = index ^ (1 << 2);
+                currmin = zcof;
+            }
+
+            if(currmin == minmax){
+                return fail;
+            }
+
+            index = currindex;
+            maxmin = currmin;
+        }
+        return green;
+
     }
-    //if(t_y_0 > 0){
-    //    return vec4(0.0,1.0,0.0,1.0);
-    //}*/
 
-    vec4 red = vec4(1.0,0.0,0.0,1.0);
-    vec4 green = vec4(0.0,1.0,0.0,1.0);
+    return fail;
 
-    float tmin = (0 - origin.x) / dir.x; 
-    float tmax = (1 - origin.x) / dir.x; 
- 
-    if (tmin > tmax){
-        float h = tmax;
-        tmax = tmin;
-        tmin = h;
-    } 
-     
-    float tymin = (0 - origin.y) / dir.y; 
-    float tymax = (1 - origin.y) / dir.y; 
- 
-    if (tymin > tymax){
-        float h = tymax;
-        tymax = tymin;
-        tymin = h;
-    } 
- 
-    if ((tmin > tymax) || (tymin > tmax)) 
-        return red; 
- 
-    if (tymin > tmin) 
-        tmin = tymin; 
- 
-    if (tymax < tmax) 
-        tmax = tymax; 
- 
-    float tzmin = (0 - origin.z) / dir.z; 
-    float tzmax = (1 - origin.z) / dir.z; 
- 
-    if (tzmin > tzmax){
-        float h = tzmax;
-        tzmax = tzmin;
-        tzmin = h;
-    } 
- 
-    if ((tmin > tzmax) || (tzmin > tmax)) 
-        return red; 
- 
-    if (tzmin > tmin) 
-        tmin = tzmin; 
- 
-    if (tzmax < tmax) 
-        tmax = tzmax; 
-
-    return green;
 }
+
+
 
 void main()
 {
@@ -97,6 +131,6 @@ void main()
 
     vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
     vec3 dir = mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x);
-    vec4 col = trace(eye, dir);
+    vec4 col = trace(eye, dir, vec4(1.0,1.0,1.0,1.0), vec4(1.0,0.0,0.0,1.0));
     imageStore(frame, pix, col);
 }

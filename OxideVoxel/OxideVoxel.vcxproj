@@ -158,6 +158,7 @@
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Math.cpp" />
+    <ClCompile Include="Octree.cpp" />
     <ClCompile Include="OxideVoxel.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Transform.cpp" />
