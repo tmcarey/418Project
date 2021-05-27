@@ -1,4 +1,5 @@
 #include "window.h"
+#include "allegro5/allegro_opengl.h"
 
 Window* Window::m_Instance = nullptr;
 
@@ -26,7 +27,6 @@ void Window::update()
 		glfwSetWindowShouldClose(m_Window, true);
 	}
 
-	//glfwSetCursorPos(m_Window, m_Width/2, m_Height/2);
 	glfwSwapBuffers(m_Window);
 }
 
@@ -57,18 +57,16 @@ bool Window::init() {
 	m_Name = "Ironclad";
 	m_Width = 1920;
 	m_Height = 1080;
-
+	m_Window = 0;
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
+	Input::Init();
 	m_Window = glfwCreateWindow(m_Width, m_Height, m_Name, NULL, NULL);
 
-	if (!m_Window) {
-		return false;
-	}
+	glfwSetKeyCallback(m_Window, (GLFWkeyfun)Input::HandleInputEvent);
 
 	glfwMakeContextCurrent(m_Window);
 

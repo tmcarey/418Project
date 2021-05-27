@@ -11,6 +11,8 @@ void Log(const char* log, ...);
 
 void LogDebug(const char* log, ...);
 
+void LogNB(const char* log, ...);
+
 void LogError(const char* log, ...);
 
 

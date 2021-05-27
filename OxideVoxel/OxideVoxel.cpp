@@ -11,7 +11,17 @@
 #include "Transform.h"
 #include "Chunk.h"
 #include "Player.h"
+#include "Input.h"
 #include "Octree.h"
+#include <CL/cl.hpp>
+#include "allegro5/allegro.h"
+#include "allegro5/allegro_opengl.h"
+#include "allegro5/allegro_image.h"
+#include "allegro5/internal/alconfig.h"
+#include <fstream>
+#include "Skybox.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 //#include "stb_image.h"
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -21,19 +31,41 @@
 int main()
 {
 
-    Connection *conn = Connection::CreateConnection();
 
+	// INITIALIZE COMPUTE
+	std::vector<cl::Platform> platforms;
+
+	cl::Platform::get(&platforms);
+
+	auto platform = platforms.front();
+	std::vector<cl::Device> devices;
+	platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+	auto device = devices.front();
+	auto vendor = device.getInfo<CL_DEVICE_VENDOR>();
+	auto version = device.getInfo<CL_DEVICE_VERSION>();
+	std::cout << device.getInfo<CL_DEVICE_MAX_PARAMETER_SIZE>() << std::endl;
+
+	Input::Init();
+
+	//IMPORT CODE
+	std::ifstream rayCastShader("RayCast.cl");
+	std::string src(std::istreambuf_iterator<char>(rayCastShader), (std::istreambuf_iterator<char>()));
+	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.length() + 1));
+
+	Connection* conn = Connection::CreateConnection();
+
+	//INITIALIZE GRAPHICS
 	Graphics graphics;
 
-	if(!graphics.init()){
+	if (!graphics.init()) {
 		printf("Failed to Initialize OpenGL.\n");
 		glfwTerminate();
 		return -1;
 	}
 
 	Window* window = Window::Instance();
-	
-	if(!window->init()){
+
+	if (!window->init()) {
 		printf("Failed to Initialize OpenGL.\n");
 		glfwTerminate();
 		return -1;
@@ -48,28 +80,26 @@ int main()
 
 	Camera camera(window);
 	camera.Transform()->setParent(player.GetTransform());
+	player.GetTransform()->SetPosition(glm::vec3(50.0, 100.0, 50.0));
 
 	unsigned int shaderProgram = graphics.GenShaderProgram("VertexShader.glsl", "FragmentShader.glsl");
-	unsigned int computeProgram = graphics.GenComputeProgram("RaytraceShader.glsl");
 	glUseProgram(shaderProgram);
-	//float colors[9] = { 1.0, 0.0,0.0, 0.0, 1.0, 0.0, 0.0,0.0,1.0 };
-//	glUniform3fv(glGetUniformLocation(shaderProgram, "colors"), 9, colors);
-	//GLuint transformInID = glGetUniformLocation(shaderProgram, "transform");
+	//unsigned int computeProgram = graphics.GenComputeProgram("RaytraceShader.glsl");
 
 
 	float cubeVerts[36 * 3 * 2] = {
 		//Positive X Face
 		1.0f, 1.0f, 1.0f,
 		1.0f, 0.0f, 0.0f,
-		1.0f,-1.0f,-1.0f, 
+		1.0f,-1.0f,-1.0f,
 		1.0f, 0.0f, 0.0f,
-		1.0f, 1.0f,-1.0f, 
+		1.0f, 1.0f,-1.0f,
 		1.0f, 0.0f, 0.0f,
-		1.0f,-1.0f,-1.0f, 
+		1.0f,-1.0f,-1.0f,
 		1.0f, 0.0f, 0.0f,
-		1.0f, 1.0f, 1.0f, 
+		1.0f, 1.0f, 1.0f,
 		1.0f, 0.0f, 0.0f,
-		1.0f,-1.0f, 1.0f, 
+		1.0f,-1.0f, 1.0f,
 		1.0f, 0.0f, 0.0f,
 
 		//Negative X Face
@@ -121,7 +151,7 @@ int main()
 		 0.0f, 0.0f, 1.0f,
 		 1.0f,-1.0f, 1.0f,
 		 0.0f, 0.0f, 1.0f,
-		 - 1.0f, 1.0f, 1.0f,
+		 -1.0f, 1.0f, 1.0f,
 		0.0f, 0.0f, 1.0f,
 		 -1.0f,-1.0f, 1.0f,
 		0.0f, 0.0f, 1.0f,
@@ -142,13 +172,13 @@ int main()
 		-1.0f,-1.0f,-1.0f,
 		0.0f, 0.0f, -1.0f,
 	};
-   
+
+
 
 
 	//Create Render Texture
 	GLuint renderTexture;
 	glGenTextures(1, &renderTexture);
-	glActiveTexture(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, renderTexture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -158,8 +188,8 @@ int main()
 	// we bind it to an image unit as well
 	glBindImageTexture(0, renderTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	glUseProgram(shaderProgram);
-	
-	
+
+
 
 	GLuint vertArray;
 	glGenVertexArrays(1, &vertArray);
@@ -178,45 +208,48 @@ int main()
 	GLint posPtr = glGetAttribLocation(shaderProgram, "aPos");
 	glVertexAttribPointer(posPtr, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(posPtr);
-
-
-	glUseProgram(computeProgram);
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, renderTexture);
-	GLuint eyeLoc = glGetUniformLocation(computeProgram, "eye");
-	GLuint ray00Loc = glGetUniformLocation(computeProgram, "ray00");
-	GLuint ray01Loc = glGetUniformLocation(computeProgram, "ray01");
-	GLuint ray10Loc = glGetUniformLocation(computeProgram, "ray10");
-	GLuint ray11Loc = glGetUniformLocation(computeProgram, "ray11");
-
-	glUniform1i(glGetUniformLocation(computeProgram, "frame"), 0);
-
-	glUseProgram(shaderProgram);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, renderTexture);
 	glUniform1i(glGetUniformLocation(shaderProgram, "render"), 0);
 
-		
-	
+
 	glEnable(GL_DEPTH_TEST);
 
 	glUseProgram(shaderProgram);
-	const int WORLD_SIZE = 1;
-	Chunk *chunks[WORLD_SIZE][WORLD_SIZE];
-	for(int i = 0; i < WORLD_SIZE;i++){
-		for(int j = 0; j < WORLD_SIZE;j++){
-			chunks[i][j] = new Chunk(cubeVerts);
-			chunks[i][j]->InitializeBlocks();
-				
-		}
-    }
 
-	printf("done building mesh");
+	cl_platform_id plat;
+	clGetPlatformIDs(1, &plat, NULL);
+	cl_context_properties props[] =
+	{
+		//OpenCL platform
+		CL_CONTEXT_PLATFORM, (cl_context_properties)plat,
+		//OpenGL context
+		CL_GL_CONTEXT_KHR,   (cl_context_properties)wglGetCurrentContext(),
+		//HDC used to create the OpenGL context
+		 CL_WGL_HDC_KHR,     (cl_context_properties)wglGetCurrentDC(),
+		 0
+	};
+	int err;
+	cl::Context context(device, props, NULL, NULL, &err);
+	cl::Program program(context, sources, &err);
 
-    while(REQUIRE_CONNECT && conn->conn_state != CONNECTION_STATE::CONNECTED){
-        conn->AttemptConnection();
-    }
-
+	if (err) {
+		std::cout << err << std::endl;
+	}
+	auto builderr = program.build("-cl-std=CL1.2");
+	if (builderr != CL_SUCCESS) {
+		printf("BUILD FAILED\n");
+		std::cout << "OpenCL: Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << "\n";
+	}
+	//int buf[WIDTH * HEIGHT];
+	//cl::Buffer memBuf(context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(buf));
+	cl::Kernel kernel(program, "RayCast");
+	cl::ImageGL image(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, renderTexture, 0);
+	cl::CommandQueue queue(context, device, NULL, NULL);
+	//GO FOR IT
+	while (REQUIRE_CONNECT && conn->conn_state != CONNECTION_STATE::CONNECTED) {
+		conn->AttemptConnection();
+	}
 
 	double time = glfwGetTime();
 	double deltaTime = 0;
@@ -233,21 +266,45 @@ int main()
 	glm::vec4 ray10;
 	glm::vec4 ray11;
 
-	Octree* octreeTrue = GenerateRandom(1);
+	std::vector<cl::Memory> datas;
+	datas.push_back(image);
+	cl::Event ev;
+	kernel.setArg(0, image);
+	cl::Image2D* skybox = loadSkybox("H:/Resources/Skyboxes/space1", context);
+	kernel.setArg(9, skybox[0]);
+	kernel.setArg(10, skybox[1]);
+	kernel.setArg(11, skybox[2]);
+	kernel.setArg(12, skybox[3]);
+	kernel.setArg(13, skybox[4]);
+	kernel.setArg(14, skybox[5]);
 
-    while(!window->closed()){
-		
-		glUseProgram(computeProgram);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	float scale = 256.0f;
+	Octree mainOctree = Octree::LoadFromHeightmap("H:/Resources/Heightmaps/Heightmap.png", scale, 6);
+	float gravity = 0.0f;
+	cl::Buffer octreeData(context, CL_MEM_COPY_HOST_PTR, sizeof(unsigned short) * 2048 * 256, mainOctree.data, NULL);
+	kernel.setArg(8, scale);
+
+	while (!window->closed()) {
+		RayCastHit below = mainOctree.trace(eyePos, glm::vec3(0, -1.0, 0));
+		player.update(deltaTime);
+		if (below.hit && below.dist - 2.0f < .0001f) {
+			player.GetTransform()->SetPosition(glm::vec3(
+				player.GetTransform()->GetPosition().x,
+				below.pos.y + 2.0f,
+				player.GetTransform()->GetPosition().z));
+		}
+		else {
+			player.GetTransform()->SetPosition(player.GetTransform()->GetPosition() - (glm::vec3(0, 1.0f, 0) * (float)deltaTime * gravity));
+		}
 		eyePos = glm::vec4(camera.Transform()->GetPosition(), 1.0);
-		//printf("Eye: %f, %f, %f\n", eyePos.x, eyePos.y, eyePos.z);
-		glUniform3fv(eyeLoc, 1, glm::value_ptr(glm::vec3(eyePos)));
-		camTransInv =  glm::inverse(camera.Projection() * camera.View());
-		ray00 =  camTransInv * glm::vec4(-1, -1, 0, 1);
+		below = mainOctree.trace(eyePos, glm::vec3(0, -1.0, 0));
+		///std::cout << below.dist << std::endl;
+		camTransInv = glm::inverse(camera.Projection() * camera.View());
+		ray00 = camTransInv * glm::vec4(-1, -1, 0, 1);
 		ray00 /= ray00.w;
 		ray00 -= eyePos;
 		//printf("Ray00: %f, %f, %f\n", ray00.x, ray00.y, ray00.z);
-		ray10 =  camTransInv * glm::vec4(1, -1, 0, 1);
+		ray10 = camTransInv * glm::vec4(1, -1, 0, 1);
 		ray10 /= ray10.w;
 		ray10 -= eyePos;
 		ray01 = camTransInv * glm::vec4(-1, 1, 0, 1);
@@ -256,36 +313,65 @@ int main()
 		ray11 = camTransInv * glm::vec4(1, 1, 0, 1);
 		ray11 /= ray11.w;
 		ray11 -= eyePos;
-		//printf("Eye: %f, %f, %f", eyePos.x, eyePos.y, eyePos.z);
-		glUniform3fv(ray00Loc, 1, glm::value_ptr(ray00));
-		glUniform3fv(ray01Loc, 1, glm::value_ptr(ray01));
-		glUniform3fv(ray10Loc, 1, glm::value_ptr(ray10));
-		glUniform3fv(ray11Loc, 1, glm::value_ptr(ray11));
-		
-		for(int i = 0; i < WORLD_SIZE;i++){
-			for(int j = 0; j < WORLD_SIZE; j++){
-				//chunks[i][j]->RenderChunk();
+		queue.enqueueAcquireGLObjects(&datas, NULL, &ev);
+		ev.wait();
+		cl_float3 arg_eyePos = { eyePos.x, eyePos.y, eyePos.z };
+		kernel.setArg(1, sizeof(cl_float3), &arg_eyePos);
+		cl_float3 arg_ray00 = { ray00.x, ray00.y, ray00.z };
+		kernel.setArg(2, sizeof(cl_float3), &arg_ray00);
+		cl_float3 arg_ray10 = { ray10.x, ray10.y, ray10.z };
+		kernel.setArg(3, sizeof(cl_float3), &arg_ray10);
+		cl_float3 arg_ray01 = { ray01.x, ray01.y, ray01.z };
+		kernel.setArg(4, sizeof(cl_float3), &arg_ray01);
+		cl_float3 arg_ray11 = { ray11.x, ray11.y, ray11.z };
+		kernel.setArg(5, sizeof(cl_float3), &arg_ray11);
+		kernel.setArg(6, octreeData);
+		kernel.setArg(7, rand());
+		auto err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(window->getWidth(), window->getHeight()), cl::NDRange(1, 1));
+		queue.enqueueReleaseGLObjects(&datas, NULL, &ev);
+		queue.finish();
+		ev.wait();
+
+		if (player.paused) {
+			int f = 0;
+		}
+		glm::vec3 yo = glm::mix(mix(ray00, ray01, 0.5f), mix(ray10, ray11, 0.5f), 0.5f);
+		if (Input::GetKeyDown(GLFW_KEY_R)) {
+			RayCastHit targeted = mainOctree.trace(eyePos, yo);
+			if (targeted.hit) {
+				std::cout << targeted.lastNodeDepth << std::endl;
+				if (targeted.dist <= 10.0f) {
+					mainOctree.data[(targeted.lastNode * 10) + 1] |= ((1 << 8) << targeted.lastNodeIndex);
+					octreeData = cl::Buffer(context, CL_MEM_COPY_HOST_PTR, sizeof(unsigned short) * 2048 * 128, mainOctree.data, NULL);
+					kernel.setArg(6, octreeData);
+				}
 			}
 		}
-		
-		player.update(deltaTime);
+		else if (Input::GetKeyDown(GLFW_KEY_T)) {
+			RayCastHit targeted = mainOctree.trace(eyePos, yo);
+			if (targeted.hit) {
+				std::cout << targeted.lastNodeDepth << std::endl;
+				if (targeted.dist <= 10.0f) {
+					mainOctree.data[(targeted.hitNode * 10) + 1] ^= ((1 << 8) << targeted.hitIdx);
+					octreeData = cl::Buffer(context, CL_MEM_COPY_HOST_PTR, sizeof(unsigned short) * 2048 * 128, mainOctree.data, NULL);
+					kernel.setArg(6, octreeData);
+				}
+			}
 
-		//FOR RAY TRACING
-		glDispatchCompute(window->getWidth(), window->getHeight(), 1);
-		
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		glFinish();
+		}
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(vertArray);
 		glActiveTexture(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, renderTexture);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
 		window->update();
-		
+
 		deltaTime = glfwGetTime() - time;
 		time = glfwGetTime();
-        
-    }
+		Input::flushInput();
+	}
 }

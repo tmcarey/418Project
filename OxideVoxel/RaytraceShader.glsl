@@ -8,12 +8,11 @@ uniform vec3 ray01;
 uniform vec3 ray10;
 uniform vec3 ray11;
 
-uniform int octree2;
 
 
 
 vec4 trace(vec3 origin, vec3 dir, vec4 success, vec4 fail){
-    int octree = -2;
+    int octree = 0xAf;
     int correction = 0;
     if(dir.x < 0){
         correction = correction | 1;
@@ -89,25 +88,29 @@ vec4 trace(vec3 origin, vec3 dir, vec4 success, vec4 fail){
         
         while((octree >> (index ^ correction)) % 2 == 0){
             green = vec4(0.0,1.0,0.0,1.0);
+            bool found = false;
             float currmin = minmax;
             int currindex = 0;
 
-            if(xcof > 0 && xcof >= maxmin && xcof <= minmax && xcof <= currmin){
+            if(xcof > 0 && xcof > maxmin && xcof <= minmax && xcof <= currmin){
+                found = true;
                 currindex = index ^ (1);
                 currmin = xcof;
             }
 
-            if(ycof > 0 && ycof >= maxmin && ycof <= minmax && ycof <= currmin){
+            if(ycof > 0 && ycof > maxmin && ycof <= minmax && ycof <= currmin){
+                found = true;
                 currindex = index ^ (1 << 1);
                 currmin = ycof;
             }
 
-            if(zcof > 0 && zcof >= maxmin && zcof <= minmax && zcof <= currmin){
+            if(zcof > 0 && zcof > maxmin && zcof <= minmax && zcof <= currmin){
+                found = true;
                 currindex = index ^ (1 << 2);
                 currmin = zcof;
             }
 
-            if(currmin == minmax){
+            if(!found){
                 return fail;
             }
 

@@ -5,18 +5,20 @@ Transform* Player::GetTransform() {
 	return &m_transform;
 }
 
-Player::Player(Window* window) : m_transform(), m_window(window) {
-	speed = 15.0f;
+Player::Player(Window* window) : m_transform(), m_window(window)  {
+	speed = 7.0f;
 	horizontalAngle = 0;
 	verticalAngle = 0;
 	lastMouseX = 0;
 	lastMouseY = 0;
+	//m_window = window;
 	m_window->setInputMode(GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
 void Player::update(double deltaTime) {
 	double xpos, ypos;
 	m_window->getCursorPos(&xpos, &ypos);
+	
 
 	horizontalAngle -= mouseSensitivity * deltaTime * ((double(m_window->getWidth()) / 2.0) - xpos);
 	verticalAngle -= mouseSensitivity * deltaTime * ((double(m_window->getHeight()) / 2.0) - ypos);
@@ -30,6 +32,7 @@ void Player::update(double deltaTime) {
 	glm::vec3 globalUp = glm::vec3(0, 1, 0);
 	glm::vec3 right = m_transform.Right();
 	glm::vec3 direction = m_transform.Forward();
+	direction.y = 0.0f;
 
 	if (m_window->getKey(GLFW_KEY_Q) == GLFW_PRESS) {
 		position += globalUp * (float)deltaTime;
@@ -55,8 +58,9 @@ void Player::update(double deltaTime) {
 	}
 
 	if (m_window->getKey(GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		position *= 2;
+		position *= 6.0f;
 	}
+
 
 	m_transform.Translate(position * speed);
 	m_transform.SetEulerAngles(glm::vec3(verticalAngle, horizontalAngle, glm::radians(180.0f)));

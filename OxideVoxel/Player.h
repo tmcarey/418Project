@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include "Transform.h"
 #include "Window.h"
+#include "../packages/Allegro.5.2.6/build/native/include/allegro5/mouse.h"
 #include "Math.h"
 
 #define mouseSensitivity 0.05
@@ -13,6 +14,9 @@ public:
 	Transform* GetTransform();
 	void update(double deltaTime);
 	float speed;
+	bool paused;
+	bool placing;
+	bool removing;
 private:
 	Transform m_transform;
 	Window *m_window;

@@ -33,6 +33,20 @@ void Log(const char* log, ...) {
 #endif
 }
 
+void LogNB(const char* log, ...) {
+#if LOG_LEVEL > 0
+	va_list vl;
+	std::string full(LogPrefix);
+	const char* plog = full.append(log).c_str();
+	va_start(vl, plog);
+	vprintf(plog, vl);
+	va_end(vl);
+
+#else
+	return;
+#endif
+}
+
 
 void LogError(const char* log, ...) {
 #if LOG_LEVEL > 0
