@@ -114,6 +114,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>H:\source\repos\418Project\ext\glm\gtc;H:\source\repos\418Project\ext\glm;H:\source\repos\418Project\ext\GLAD\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;H:\source\repos\418Project\ext\GLFW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

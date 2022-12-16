@@ -1,5 +1,8 @@
 #include "Octree.h"
 #include <iostream>
+#include "omp.h"
+#include <chrono>
+using namespace std::chrono;
 
 
 void Octree::SaveToFile(const char* path) {
@@ -232,21 +235,16 @@ int scaleHeight(int val) {
 }
 
 
-void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned char* img, int parentNode, int width, int height2, glm::vec3 pos, float scale, int res, int max_res, int* lim) {
+void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentNode, int width, int height2, glm::vec3 pos, float scale, int res, int max_res, int* lim) {
 	/*if (*lim >= ((2048 * 256) / 10)) {
 		std::cout << "TOO MUCH MEMORY" << std::endl;
 		return;
 	}*/
 	unsigned int* current = out + ((long long)parentNode * (long long)11);
-	int channels = 4;
+
 	int lowerThreshold = (pos.z - scale * 2) * 255;
 	int threshold = (pos.z) * 255;
 	int upperThreshold = (pos.z + scale * 2) * 255;
-	int bl = ((width * (pos.x - scale)) + (height2 * (pos.y - scale)));
-	int br = ((width * (pos.x + scale)) + (height2 * (pos.y - scale)));
-	int tl = ((width * (pos.x - scale)) + (height2 * (pos.y + scale)));
-	int tr = ((width * (pos.x + scale)) + (height2 * (pos.y + scale)));
-	unsigned char* pixelOffset = img + ((long long)(bl) * (long long)channels);
 
 	float normalized = (float)threshold / 255.0f;
 	current[10] = (unsigned int)(255 * std::max(std::min((normalized - 0.4f) / 0.02f, 1.0f), 0.0f));
@@ -258,7 +256,7 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 			current[1] |= 1 << 0b010;
 			current[2 + (0b010)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2,
+			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2,
 				pos + glm::vec3(-scale, -scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
@@ -266,7 +264,7 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 				current[1] |= (1 << 0b000);
 				current[2 + (0b000)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2,
+				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2,
 					pos + glm::vec3(-scale, -scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
@@ -281,21 +279,20 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 	}
 
 	localQuadTree = quadTree->children[1];
-	pixelOffset = img + ((long long)(br) * (long long)channels);
 	if (localQuadTree->max > lowerThreshold) {
 		if (localQuadTree->min < upperThreshold && res < max_res) {
 			current[1] |= (1 << 0b011) << 8;
 			current[1] |= 1 << 0b011;
 			current[2 + (0b011)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2, pos + glm::vec3(-scale, scale, -scale), scale / 2, res + 1, max_res, lim);
+			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(-scale, scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
 				current[1] |= (1 << 0b001) << 8;
 				current[1] |= 1 << 0b001;
 				current[2 + (0b001)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2, pos + glm::vec3(-scale, scale, scale), scale / 2, res + 1, max_res, lim);
+				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(-scale, scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
 		else {
@@ -309,21 +306,20 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 	}
 
 	localQuadTree = quadTree->children[2];
-	pixelOffset = img + ((long long)(tl) * (long long)channels);
 	if (localQuadTree->max > lowerThreshold) {
 		if (localQuadTree->min < upperThreshold && res < max_res) {
 			current[1] |= (1 << 0b110) << 8;
 			current[1] |= 1 << 0b110;
 			current[2 + (0b110)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2, pos + glm::vec3(scale, -scale, -scale), scale / 2, res + 1, max_res, lim);
+			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, -scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
 				current[1] |= (1 << 0b100) << 8;
 				current[1] |= 1 << 0b100;
 				current[2 + (0b100)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2, pos + glm::vec3(scale, -scale, scale), scale / 2, res + 1, max_res, lim);
+				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, -scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
 		else {
@@ -335,7 +331,6 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 			}
 		}
 	}
-	pixelOffset = img + ((long long)(tr) * (long long)channels);
 
 	localQuadTree = quadTree->children[3];
 	if (localQuadTree->max > lowerThreshold) {
@@ -344,14 +339,14 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 			current[1] |= 1 << 0b111;
 			current[2 + (0b111)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2, pos + glm::vec3(scale, scale, -scale), scale / 2, res + 1, max_res, lim);
+			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
 				current[1] |= (1 << 0b101) << 8;
 				current[1] |= 1 << 0b101;
 				current[2 + (0b101)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, img, *lim - 1, width, height2, pos + glm::vec3(scale, scale, scale), scale / 2, res + 1, max_res, lim);
+				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
 		else {
@@ -366,24 +361,66 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, unsigned ch
 }
 
 Octree Octree::LoadFromHeightmap(const char* path, float scale, int resolution) {
+	auto startLoad = high_resolution_clock::now();
+
 	int width, height, channels;
 	unsigned char* data = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
 	int curr_res = 1;
 	float res_scale = pow(2, -curr_res);
-	unsigned int* out = new unsigned int[100000 * 256]{ 0 };
+	
+	unsigned int* out1 = new unsigned int[100000 * 256]{ 0 };
+	unsigned int* out2 = new unsigned int[100000 * 256]{ 0 };
+	unsigned int* out3 = new unsigned int[100000 * 256]{ 0 };
+	unsigned int* out4 = new unsigned int[100000 * 256]{ 0 };
 	int currNode = 0;
 	glm::vec3 pos = glm::vec3(1 / (2.0f), 1 / (2.0f), 1 / (2.0f));
-	int* lim = new int;
-	*lim = 1;
+	int* lim1 = new int;
+	int* lim2 = new int;
+	int* lim3 = new int;
+	int* lim4 = new int;
+	*lim1 = 1;
+	*lim2 = 1;
+	*lim3 = 1;
+	*lim4 = 1;
+
+	auto endLoad = high_resolution_clock::now();
+	auto loadMemoryTime = duration_cast<microseconds>(endLoad - startLoad);
+	printf("Load Memory time: %lld\n", loadMemoryTime);
+
+	auto startQuad = high_resolution_clock::now();
 	HeightmapQuadtree* quadtree = HeightmapQuadtree::LoadFromHeightmap(data, height, resolution);
 
-	HeightmapHelper(quadtree, out, data, 0, width, width * height, pos, 1 / (4.0f), 1, resolution, lim);
+	auto endQuad = high_resolution_clock::now();
+	auto quadTreeDuration = duration_cast<microseconds>(endQuad - startQuad);
+	printf("Quadtree Build time: %lld\n", quadTreeDuration);
 
-	printf("Total node count: %d\n", *lim);
-	printf("Total quadtree data size: %d bytes\n", *lim * sizeof(unsigned int) * 11);
+	auto startRender = high_resolution_clock::now();
+#pragma omp parallel for
+	for (int i = 0; i < 4; i++) {
+		switch(i){
+		case 0:
+			HeightmapHelper(quadtree->children[i], out1, 0, width, width * height, pos, 1 / (8.0f), 1, resolution - 1, lim1);
+			break;
+		case 1:
+			HeightmapHelper(quadtree->children[i], out2, 0, width, width * height, pos, 1 / (8.0f), 1, resolution - 1, lim2);
+			break;
+		case 2:
+			HeightmapHelper(quadtree->children[i], out3, 0, width, width * height, pos, 1 / (8.0f), 1, resolution - 1, lim3);
+			break;
+		case 3:
+			HeightmapHelper(quadtree->children[i], out4, 0, width, width * height, pos, 1 / (8.0f), 1, resolution - 1, lim4);
+			break;
+		}
+	}
+	auto endRender = high_resolution_clock::now();
+	auto renderDuration = duration_cast<microseconds>(endRender - startRender);
+	printf("Octree Build time: %lld\n", renderDuration);
+
+	printf("Total node count: %d\n", *lim1);
+	printf("Total quadtree data size: %d bytes\n", *lim1 * sizeof(unsigned int) * 11);
 	//std::cout << (int)out[1] << std::endl;
 	//out[2] = 0;
-	return Octree(out, scale);
+	return Octree(out1, scale);
 }
 
 void QuadtreeHeightmapHelper(HeightmapQuadtree* out, int width, unsigned char* data, glm::uvec2 bl, glm::uvec2 tr, int curr_res, int max_res) {
@@ -405,17 +442,27 @@ void QuadtreeHeightmapHelper(HeightmapQuadtree* out, int width, unsigned char* d
 	int scale = (tr.x - bl.x) / 2;
 	glm::uvec2 scale2 = glm::uvec2(scale, scale);
 
-	for (int i = 0; i < 4; i++) {
-		out->children[i] = new HeightmapQuadtree();
+	glm::uvec2 offsets[8] = {
+		bl, bl + scale2,
+		bl + glm::uvec2(scale, 0), tr - glm::uvec2(0, scale),
+		bl + glm::uvec2(0, scale), tr - glm::uvec2(scale, 0),
+		bl + scale2, tr,
+	};
+
+	if (curr_res == 0) {
+		for (int i = 0; i < 4; i++) {
+			out->children[i] = new HeightmapQuadtree();
+			QuadtreeHeightmapHelper(out->children[i], width, data,
+				offsets[i * 2], offsets[i * 2 + 1], curr_res + 1, max_res);
+		}
 	}
-	QuadtreeHeightmapHelper(out->children[0], width, data,
-		bl, bl + scale2, curr_res + 1, max_res);
-	QuadtreeHeightmapHelper(out->children[1], width, data,
-		bl + glm::uvec2(scale, 0), tr - glm::uvec2(0, scale), curr_res + 1, max_res);
-	QuadtreeHeightmapHelper(out->children[2], width, data,
-		bl + glm::uvec2(0, scale), tr - glm::uvec2(scale, 0), curr_res + 1, max_res);
-	QuadtreeHeightmapHelper(out->children[3], width, data,
-		bl + scale2, tr, curr_res + 1, max_res);
+	else {
+		for (int i = 0; i < 4; i++) {
+			out->children[i] = new HeightmapQuadtree();
+			QuadtreeHeightmapHelper(out->children[i], width, data,
+				offsets[i * 2], offsets[i * 2 + 1], curr_res + 1, max_res);
+		}
+	}
 
 	for (int i = 0; i < 4; i++) {
 		out->max = std::max(out->max, out->children[i]->max);
