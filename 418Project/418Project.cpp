@@ -351,7 +351,7 @@ int main()
 
 		glm::vec3 yo = glm::mix(mix(ray00, ray01, 0.5f), mix(ray10, ray11, 0.5f), 0.5f);
 
-		/*if (Input::GetKeyDown(GLFW_KEY_R)) {
+		if (Input::GetKeyDown(GLFW_KEY_R)) {
 			RayCastHit targeted = mainOctree.trace(eyePos, yo);
 			if (targeted.hit) {
 				//std::cout << targeted.lastNodeDepth << std::endl;
@@ -373,7 +373,7 @@ int main()
 				}
 			}
 
-		}*/
+		}
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
