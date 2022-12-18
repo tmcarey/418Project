@@ -290,7 +290,7 @@ __kernel void RayCast(__write_only image2d_t image,
 	float bias = 0.000001f;
 	eye /= scale;
 	eye += 1.0f;
-	int N = 4;
+	int N = 64;
 
 	float4 sunColor = (float4)(1, 1, 1, 1.0);
 	uint2 forRand = (get_global_id(0) * 13123 + get_global_id(1) * 17 + frame_seed * 251, get_global_id(1) * 13123 + get_global_id(0) * 17 + frame_seed * 251);

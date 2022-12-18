@@ -4,12 +4,6 @@
 #include <chrono>
 using namespace std::chrono;
 
-
-void Octree::SaveToFile(const char* path) {
-	//FILE* file = fopen(path, "wb");
-	//fwrite(data, 1, 10, file);
-}
-
 RayCastHit Octree::trace(glm::vec3 origin, glm::vec3 d) {
 	RayCastHit out;
 	origin /= world_scale;
@@ -235,11 +229,7 @@ int scaleHeight(int val) {
 }
 
 
-void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentNode, int width, int height2, glm::vec3 pos, float scale, int res, int max_res, int* lim) {
-	/*if (*lim >= ((2048 * 256) / 10)) {
-		std::cout << "TOO MUCH MEMORY" << std::endl;
-		return;
-	}*/
+void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentNode,  glm::vec3 pos, float scale, int res, int max_res, int* lim) {
 	unsigned int* current = out + ((long long)parentNode * (long long)11);
 
 	int lowerThreshold = (pos.z - scale * 2) * 255;
@@ -256,7 +246,7 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentN
 			current[1] |= 1 << 0b010;
 			current[2 + (0b010)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2,
+			HeightmapHelper(localQuadTree, out, *lim - 1, 
 				pos + glm::vec3(-scale, -scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
@@ -264,7 +254,7 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentN
 				current[1] |= (1 << 0b000);
 				current[2 + (0b000)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2,
+				HeightmapHelper(localQuadTree, out, *lim - 1, 
 					pos + glm::vec3(-scale, -scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
@@ -285,14 +275,14 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentN
 			current[1] |= 1 << 0b011;
 			current[2 + (0b011)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(-scale, scale, -scale), scale / 2, res + 1, max_res, lim);
+			HeightmapHelper(localQuadTree, out, *lim - 1, pos + glm::vec3(-scale, scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
 				current[1] |= (1 << 0b001) << 8;
 				current[1] |= 1 << 0b001;
 				current[2 + (0b001)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(-scale, scale, scale), scale / 2, res + 1, max_res, lim);
+				HeightmapHelper(localQuadTree, out, *lim - 1, pos + glm::vec3(-scale, scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
 		else {
@@ -312,14 +302,14 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentN
 			current[1] |= 1 << 0b110;
 			current[2 + (0b110)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, -scale, -scale), scale / 2, res + 1, max_res, lim);
+			HeightmapHelper(localQuadTree, out, *lim - 1,  pos + glm::vec3(scale, -scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
 				current[1] |= (1 << 0b100) << 8;
 				current[1] |= 1 << 0b100;
 				current[2 + (0b100)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, -scale, scale), scale / 2, res + 1, max_res, lim);
+				HeightmapHelper(localQuadTree, out, *lim - 1,  pos + glm::vec3(scale, -scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
 		else {
@@ -339,14 +329,14 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentN
 			current[1] |= 1 << 0b111;
 			current[2 + (0b111)] = *lim;
 			*lim = *lim + 1;
-			HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, scale, -scale), scale / 2, res + 1, max_res, lim);
+			HeightmapHelper(localQuadTree, out, *lim - 1,  pos + glm::vec3(scale, scale, -scale), scale / 2, res + 1, max_res, lim);
 
 			if (localQuadTree->max > threshold) {
 				current[1] |= (1 << 0b101) << 8;
 				current[1] |= 1 << 0b101;
 				current[2 + (0b101)] = *lim;
 				*lim = *lim + 1;
-				HeightmapHelper(localQuadTree, out, *lim - 1, width, height2, pos + glm::vec3(scale, scale, scale), scale / 2, res + 1, max_res, lim);
+				HeightmapHelper(localQuadTree, out, *lim - 1,  pos + glm::vec3(scale, scale, scale), scale / 2, res + 1, max_res, lim);
 			}
 		}
 		else {
@@ -361,27 +351,19 @@ void HeightmapHelper(HeightmapQuadtree* quadTree, unsigned int* out, int parentN
 }
 
 Octree Octree::LoadFromHeightmap(const char* path, float scale, int resolution) {
-	auto startLoad = high_resolution_clock::now();
 
 	int width, height, channels;
+
 	unsigned char* data = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
-	int curr_res = 1;
-	float res_scale = pow(2, -curr_res);
 	
-	unsigned int* out1 = new unsigned int[100000 * 256]{ 0 };
-	unsigned int* out2 = new unsigned int[100000 * 256]{ 0 };
-	unsigned int* out3 = new unsigned int[100000 * 256]{ 0 };
-	unsigned int* out4 = new unsigned int[100000 * 256]{ 0 };
-	int currNode = 0;
+	auto startLoad = high_resolution_clock::now();
+
+	unsigned int* out = new unsigned int[100000 * 256]{ 0 };
+
 	glm::vec3 pos = glm::vec3(1 / (2.0f), 1 / (2.0f), 1 / (2.0f));
-	int* lim1 = new int;
-	int* lim2 = new int;
-	int* lim3 = new int;
-	int* lim4 = new int;
-	*lim1 = 1;
-	*lim2 = 1;
-	*lim3 = 1;
-	*lim4 = 1;
+
+	int* lim = new int;
+	*lim = 1;
 
 	auto endLoad = high_resolution_clock::now();
 	auto loadMemoryTime = duration_cast<microseconds>(endLoad - startLoad);
@@ -395,6 +377,8 @@ Octree Octree::LoadFromHeightmap(const char* path, float scale, int resolution) 
 	printf("Quadtree Build time: %lld\n", quadTreeDuration);
 
 	auto startRender = high_resolution_clock::now();
+
+/* What a parralel landscape construction might look like
 #pragma omp parallel for
 	for (int i = 0; i < 4; i++) {
 		switch(i){
@@ -411,16 +395,18 @@ Octree Octree::LoadFromHeightmap(const char* path, float scale, int resolution) 
 			HeightmapHelper(quadtree->children[i], out4, 0, width, width * height, pos, 1 / (8.0f), 1, resolution - 1, lim4);
 			break;
 		}
-	}
+	}*/
+
+	HeightmapHelper(quadtree, out, 0, pos, 1 / (4.0f), 1, resolution, lim);
+	
 	auto endRender = high_resolution_clock::now();
 	auto renderDuration = duration_cast<microseconds>(endRender - startRender);
+
 	printf("Octree Build time: %lld\n", renderDuration);
 
-	printf("Total node count: %d\n", *lim1);
-	printf("Total quadtree data size: %d bytes\n", *lim1 * sizeof(unsigned int) * 11);
-	//std::cout << (int)out[1] << std::endl;
-	//out[2] = 0;
-	return Octree(out1, scale);
+	printf("Total node count: %d\n", *lim);
+	printf("Total quadtree data size: %d bytes\n", *lim * sizeof(unsigned int) * 11);
+	return Octree(out, scale);
 }
 
 void QuadtreeHeightmapHelper(HeightmapQuadtree* out, int width, unsigned char* data, glm::uvec2 bl, glm::uvec2 tr, int curr_res, int max_res) {

@@ -22,7 +22,6 @@
 #include "stb_image_write.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-//#include "stb_image.h"
 #include <chrono>
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -33,8 +32,7 @@ using namespace std::chrono;
 
 int main()
 {
-
-
+	// Collect data then quit
 	bool takeSinglePicture = true;
 
 
@@ -53,14 +51,13 @@ int main()
 
 	Input::Init();
 
-	//IMPORT CODE
+	//IMPORT KERNEL CODE
 	std::ifstream rayCastShader("RayCast.cl");
 	std::string src(std::istreambuf_iterator<char>(rayCastShader), (std::istreambuf_iterator<char>()));
 	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.length() + 1));
 
 	//INITIALIZE GRAPHICS
 	Graphics graphics;
-
 	if (!graphics.init()) {
 		printf("Failed to Initialize OpenGL.\n");
 		glfwTerminate();
@@ -78,7 +75,7 @@ int main()
 
 	glClearColor(0.529f, 0.808f, 0.922f, 0.0f);
 
-
+	// Initialize player and camera
 	Player player(window);
 
 	Camera camera(window);
@@ -89,96 +86,6 @@ int main()
 	unsigned int shaderProgram = graphics.GenShaderProgram("VertexShader.glsl", "FragmentShader.glsl");
 	glUseProgram(shaderProgram);
 	//unsigned int computeProgram = graphics.GenComputeProgram("RaytraceShader.glsl");
-
-
-	float cubeVerts[36 * 3 * 2] = {
-		//Positive X Face
-		1.0f, 1.0f, 1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 1.0f,-1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f,-1.0f, 1.0f,
-		1.0f, 0.0f, 0.0f,
-
-		//Negative X Face
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 0.0f, 0.0f,
-		-1.0f,-1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f,
-		-1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 0.0f, 0.0f,
-		-1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f,
-		-1.0f, 1.0f,-1.0f,
-		-1.0f, 0.0f, 0.0f,
-
-		//Positive Y Face
-		1.0f, 1.0f, 1.0f,
-		0.0f, 1.0f, 0.0f,
-		1.0f, 1.0f,-1.0f,
-		0.0f, 1.0f, 0.0f,
-		-1.0f, 1.0f,-1.0f,
-		0.0f, 1.0f, 0.0f,
-		 1.0f, 1.0f, 1.0f,
-		 0.0f, 1.0f, 0.0f,
-		-1.0f, 1.0f,-1.0f,
-		0.0f, 1.0f, 0.0f,
-		-1.0f, 1.0f, 1.0f,
-		0.0f, 1.0f, 0.0f,
-
-		//Negative Y Face
-		1.0f,-1.0f, 1.0f,
-		0.0f, -1.0f, 0.0f,
-		-1.0f,-1.0f, 1.0f,
-		0.0f, -1.0f, 0.0f,
-		-1.0f,-1.0f,-1.0f,
-		0.0f, -1.0f, 0.0f,
-		1.0f,-1.0f, 1.0f,
-		0.0f, -1.0f, 0.0f,
-		-1.0f,-1.0f,-1.0f,
-		0.0f, -1.0f, 0.0f,
-		1.0f,-1.0f,-1.0f,
-		0.0f, -1.0f, 0.0f,
-
-		//Positive Z Face
-		 1.0f, 1.0f, 1.0f,
-		 0.0f, 0.0f, 1.0f,
-		 -1.0f, 1.0f, 1.0f,
-		 0.0f, 0.0f, 1.0f,
-		 1.0f,-1.0f, 1.0f,
-		 0.0f, 0.0f, 1.0f,
-		 -1.0f, 1.0f, 1.0f,
-		0.0f, 0.0f, 1.0f,
-		 -1.0f,-1.0f, 1.0f,
-		0.0f, 0.0f, 1.0f,
-		 1.0f,-1.0f, 1.0f,
-		0.0f, 0.0f, 1.0f,
-
-		//Negative Z Face
-		1.0f, 1.0f,-1.0f,
-		0.0f, 0.0f, -1.0f,
-		-1.0f,-1.0f,-1.0f,
-		0.0f, 0.0f, -1.0f,
-		-1.0f, 1.0f,-1.0f,
-		0.0f, 0.0f, -1.0f,
-		1.0f, 1.0f,-1.0f,
-		0.0f, 0.0f, -1.0f,
-		1.0f,-1.0f,-1.0f,
-		0.0f, 0.0f, -1.0f,
-		-1.0f,-1.0f,-1.0f,
-		0.0f, 0.0f, -1.0f,
-	};
-
-
-
 
 	//Create Render Texture
 	GLuint renderTexture;
@@ -192,8 +99,6 @@ int main()
 	// we bind it to an image unit as well
 	glBindImageTexture(0, renderTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	glUseProgram(shaderProgram);
-
-
 
 	GLuint vertArray;
 	glGenVertexArrays(1, &vertArray);
@@ -291,29 +196,20 @@ int main()
 	queue.finish();
 
 	float gravity = 0.0f;
+	// allocate 
 	cl::Buffer octreeData(context, CL_MEM_COPY_HOST_PTR, sizeof(unsigned int) * 100000 * 256, mainOctree.data, NULL);
 	kernel.setArg(8, scale);
 	while (!window->closed()) {
-		/*RayCastHit below = mainOctree.trace(eyePos, glm::vec3(0, -1.0, 0));
-		if (below.hit && below.dist - 2.0f < .0001f) {
-			player.GetTransform()->SetPosition(glm::vec3(
-				player.GetTransform()->GetPosition().x,
-				below.pos.y + 2.0f,
-				player.GetTransform()->GetPosition().z));
-		}
-		else {
-			player.GetTransform()->SetPosition(player.GetTransform()->GetPosition() - (glm::vec3(0, 1.0f, 0) * (float)deltaTime * gravity));
-		}*/
-		//below = mainOctree.trace(eyePos, glm::vec3(0, -1.0, 0));
-		///std::cout << below.dist << std::endl;
-
+		// Update movement
 		player.update(deltaTime);
+
+		// Configure kernel with info about the camera position and orientation
+
 		eyePos = glm::vec4(camera.Transform()->GetPosition(), 1.0);
 		camTransInv = glm::inverse(camera.Projection() * camera.View());
 		ray00 = camTransInv * glm::vec4(-1, -1, 0, 1);
 		ray00 /= ray00.w;
 		ray00 -= eyePos;
-		//printf("Ray00: %f, %f, %f\n", ray00.x, ray00.y, ray00.z);
 		ray10 = camTransInv * glm::vec4(1, -1, 0, 1);
 		ray10 /= ray10.w;
 		ray10 -= eyePos;
@@ -336,6 +232,7 @@ int main()
 		kernel.setArg(6, octreeData);
 		kernel.setArg(7, rand());
 
+		// Deploy kernel
 		auto startRender = high_resolution_clock::now();
 		auto err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(window->getWidth(), window->getHeight()), cl::NDRange(4, 4, 1));
 		queue.finish();
@@ -352,6 +249,7 @@ int main()
 
 		glm::vec3 yo = glm::mix(mix(ray00, ray01, 0.5f), mix(ray10, ray11, 0.5f), 0.5f);
 
+		// Runtime break / place blocks
 		if (Input::GetKeyDown(GLFW_KEY_R)) {
 			RayCastHit targeted = mainOctree.trace(eyePos, yo);
 			if (targeted.hit) {
@@ -373,21 +271,22 @@ int main()
 					kernel.setArg(6, octreeData);
 				}
 			}
-
 		}
 
+		// Render OpenCL result with OpenGL
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
 		glUseProgram(shaderProgram);
 		glBindVertexArray(vertArray);
 		glActiveTexture(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, renderTexture);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+		// Update inputs
 		window->update();
 
+		// For collecting data
 		if (takeSinglePicture) {
+			// Probably could just pull the data straight from the opencl texture, but this works too
 			int dataSize = 1920 * 1080 * 3;
 			unsigned short* data = new unsigned short[dataSize];
 			glReadPixels(0, 0, 1920, 1080, GL_RGB, GL_UNSIGNED_BYTE, data);
